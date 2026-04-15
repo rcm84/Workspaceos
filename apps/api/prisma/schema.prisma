@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  DRAFT
+  PROVISIONING
+  READY
+  ERROR
+  ARCHIVED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  projects     Project[]
+}
+
+model Template {
+  id            String    @id @default(cuid())
+  slug          String    @unique
+  name          String
+  description   String
+  repoUrl       String
+  defaultPort   Int
+  envSchemaJson Json
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  projects      Project[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  userId      String
+  templateId  String
+  name        String
+  slug        String        @unique
+  status      ProjectStatus @default(DRAFT)
+  localPath   String?
+  port        Int?
+  databaseUrl String?
+  envJson     Json
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template Template @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([templateId])
+}
