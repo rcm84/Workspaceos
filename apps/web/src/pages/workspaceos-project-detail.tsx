@@ -1,8 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 
-import { ProjectStatusBadge } from '@colanode/web/features/workspaceos/projects/project-status-badge';
-import { TemplatePill } from '@colanode/web/features/workspaceos/templates/template-pill';
-import { getWorkspaceOSProject } from '@colanode/web/lib/workspaceos-api';
+import { WorkspaceOSProjectDetailPanel } from '@colanode/web/features/workspaceos/projects/project-detail-panel';
+import {
+  deleteWorkspaceOSProject,
+  exportWorkspaceOSProject,
+  generateWorkspaceOSProjectDocker,
+  getWorkspaceOSProject,
+} from '@colanode/web/lib/workspaceos-api';
 import { Button } from '@colanode/ui/components/ui/button';
 import { Skeleton } from '@colanode/ui/components/ui/skeleton';
 
@@ -13,10 +18,40 @@ interface WorkspaceOSProjectDetailPageProps {
 export const WorkspaceOSProjectDetailPage = ({
   projectId,
 }: WorkspaceOSProjectDetailPageProps) => {
+  const [actionSuccessMessage, setActionSuccessMessage] = useState<string>();
+
   const projectQuery = useQuery({
     queryKey: ['workspaceos', 'project', projectId],
     queryFn: () => getWorkspaceOSProject(projectId),
   });
+
+  const generateDockerMutation = useMutation({
+    mutationFn: () => generateWorkspaceOSProjectDocker(projectId),
+    onSuccess: (result) => {
+      setActionSuccessMessage(`Docker files generated at ${result.filePath}`);
+    },
+  });
+
+  const exportZipMutation = useMutation({
+    mutationFn: () => exportWorkspaceOSProject(projectId),
+    onSuccess: (result) => {
+      setActionSuccessMessage(
+        `Export created: ${result.fileName} (${result.filePath})`
+      );
+    },
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: () => deleteWorkspaceOSProject(projectId),
+    onSuccess: () => {
+      window.location.href = '/workspaceos';
+    },
+  });
+
+  const actionErrorMessage =
+    (generateDockerMutation.isError && generateDockerMutation.error.message) ||
+    (exportZipMutation.isError && exportZipMutation.error.message) ||
+    (deleteProjectMutation.isError && deleteProjectMutation.error.message);
 
   return (
     <div className="space-y-4 rounded-lg border p-6">
@@ -27,36 +62,33 @@ export const WorkspaceOSProjectDetailPage = ({
         </Button>
       </div>
 
-      {projectQuery.isLoading && <Skeleton className="h-24 w-full" />}
+      {projectQuery.isLoading && <Skeleton className="h-32 w-full" />}
 
       {projectQuery.isError && (
         <p className="text-sm text-destructive">{projectQuery.error.message}</p>
       )}
 
       {projectQuery.isSuccess && (
-        <div className="space-y-3 text-sm">
-          <p>
-            <span className="font-semibold">Name:</span> {projectQuery.data.name}
-          </p>
-          <p>
-            <span className="font-semibold">Status:</span>{' '}
-            <ProjectStatusBadge status={projectQuery.data.status} />
-          </p>
-          <p>
-            <span className="font-semibold">Template:</span>{' '}
-            <TemplatePill templateSlug={projectQuery.data.templateSlug} />
-          </p>
-          <p>
-            <span className="font-semibold">Created:</span>{' '}
-            {new Date(projectQuery.data.createdAt).toLocaleString()}
-          </p>
-          {projectQuery.data.description && (
-            <p>
-              <span className="font-semibold">Description:</span>{' '}
-              {projectQuery.data.description}
-            </p>
-          )}
-        </div>
+        <WorkspaceOSProjectDetailPanel
+          actionErrorMessage={actionErrorMessage}
+          actionSuccessMessage={actionSuccessMessage}
+          isDeletingProject={deleteProjectMutation.isPending}
+          isExportingZip={exportZipMutation.isPending}
+          isGeneratingDocker={generateDockerMutation.isPending}
+          onDeleteProject={() => {
+            setActionSuccessMessage(undefined);
+            deleteProjectMutation.mutate();
+          }}
+          onExportZip={() => {
+            setActionSuccessMessage(undefined);
+            exportZipMutation.mutate();
+          }}
+          onGenerateDocker={() => {
+            setActionSuccessMessage(undefined);
+            generateDockerMutation.mutate();
+          }}
+          project={projectQuery.data}
+        />
       )}
     </div>
   );

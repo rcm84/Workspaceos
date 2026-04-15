@@ -1,16 +1,55 @@
-import { useMutation } from '@tanstack/react-query';
-import { FormEvent, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 
-import { createWorkspaceOSProject } from '@colanode/web/lib/workspaceos-api';
-import { Button } from '@colanode/ui/components/ui/button';
-import { Input } from '@colanode/ui/components/ui/input';
-import { Label } from '@colanode/ui/components/ui/label';
-import { Textarea } from '@colanode/ui/components/ui/textarea';
+import { WorkspaceOSCreateProjectForm } from '@colanode/web/features/workspaceos/projects/create-project-form';
+import {
+  createWorkspaceOSProject,
+  getWorkspaceOSTemplates,
+} from '@colanode/web/lib/workspaceos-api';
+import { Skeleton } from '@colanode/ui/components/ui/skeleton';
+
+interface CreateProjectFormValues {
+  name: string;
+  templateSlug: string;
+  port: string;
+  databaseUrl: string;
+}
 
 export const WorkspaceOSCreateProjectPage = () => {
-  const [name, setName] = useState('');
-  const [templateSlug, setTemplateSlug] = useState('starter');
-  const [description, setDescription] = useState('');
+  const [formValues, setFormValues] = useState<CreateProjectFormValues>({
+    name: '',
+    templateSlug: '',
+    port: '',
+    databaseUrl: '',
+  });
+
+  const templatesQuery = useQuery({
+    queryKey: ['workspaceos', 'templates'],
+    queryFn: getWorkspaceOSTemplates,
+  });
+
+  useEffect(() => {
+    if (!templatesQuery.data || templatesQuery.data.length === 0) {
+      return;
+    }
+
+    setFormValues((previous) => {
+      const selectedTemplate =
+        templatesQuery.data.find((template) => template.slug === previous.templateSlug) ??
+        templatesQuery.data[0];
+
+      const hasSelectedTemplate = previous.templateSlug.length > 0;
+      const nextPort = hasSelectedTemplate
+        ? previous.port
+        : selectedTemplate.defaultPort.toString();
+
+      return {
+        ...previous,
+        templateSlug: hasSelectedTemplate ? previous.templateSlug : selectedTemplate.slug,
+        port: nextPort,
+      };
+    });
+  }, [templatesQuery.data]);
 
   const createProjectMutation = useMutation({
     mutationFn: createWorkspaceOSProject,
@@ -19,13 +58,14 @@ export const WorkspaceOSCreateProjectPage = () => {
     },
   });
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = () => {
+    const parsedPort = Number.parseInt(formValues.port, 10);
 
     createProjectMutation.mutate({
-      name,
-      templateSlug,
-      description: description.length > 0 ? description : undefined,
+      name: formValues.name,
+      templateSlug: formValues.templateSlug,
+      port: Number.isFinite(parsedPort) ? parsedPort : undefined,
+      databaseUrl: formValues.databaseUrl,
     });
   };
 
@@ -33,53 +73,29 @@ export const WorkspaceOSCreateProjectPage = () => {
     <div className="rounded-lg border p-6">
       <h1 className="mb-4 text-2xl font-semibold">Create WorkspaceOS Project</h1>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
+      {templatesQuery.isLoading && (
         <div className="space-y-2">
-          <Label htmlFor="project-name">Project name</Label>
-          <Input
-            id="project-name"
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Website redesign"
-            required
-            value={name}
-          />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
         </div>
+      )}
 
-        <div className="space-y-2">
-          <Label htmlFor="template-slug">Template slug</Label>
-          <Input
-            id="template-slug"
-            onChange={(event) => setTemplateSlug(event.target.value)}
-            required
-            value={templateSlug}
-          />
-        </div>
+      {templatesQuery.isError && (
+        <p className="text-sm text-destructive">{templatesQuery.error.message}</p>
+      )}
 
-        <div className="space-y-2">
-          <Label htmlFor="project-description">Description</Label>
-          <Textarea
-            id="project-description"
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Optional project notes"
-            value={description}
-          />
-        </div>
-
-        {createProjectMutation.isError && (
-          <p className="text-sm text-destructive">
-            {createProjectMutation.error.message}
-          </p>
-        )}
-
-        <div className="flex items-center gap-3">
-          <Button disabled={createProjectMutation.isPending} type="submit">
-            {createProjectMutation.isPending ? 'Creating...' : 'Create Project'}
-          </Button>
-          <Button asChild variant="secondary">
-            <a href="/workspaceos">Cancel</a>
-          </Button>
-        </div>
-      </form>
+      {templatesQuery.isSuccess && (
+        <WorkspaceOSCreateProjectForm
+          errorMessage={createProjectMutation.isError ? createProjectMutation.error.message : undefined}
+          isSubmitting={createProjectMutation.isPending}
+          onChange={setFormValues}
+          onSubmit={handleSubmit}
+          templates={templatesQuery.data}
+          values={formValues}
+        />
+      )}
     </div>
   );
 };
