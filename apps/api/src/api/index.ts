@@ -4,6 +4,7 @@ import { clientRoutes } from '@colanode/server/api/client/routes';
 import { configGetRoute } from '@colanode/server/api/config';
 import { homeRoute } from '@colanode/server/api/home';
 import { config } from '@colanode/server/lib/config';
+import { workspaceOSProjectsRoutes } from '@colanode/server/modules/workspaceos/projects/projects.routes';
 import { workspaceOSTemplatesRoutes } from '@colanode/server/modules/workspaceos/templates/templates.routes';
 
 export const apiRoutes: FastifyPluginCallback = (instance, _, done) => {
@@ -14,6 +15,9 @@ export const apiRoutes: FastifyPluginCallback = (instance, _, done) => {
   instance.register(clientRoutes, { prefix: `${prefix}/client/v1` });
   instance.register(workspaceOSTemplatesRoutes, {
     prefix: `${prefix}/api/workspaceos/templates`,
+  });
+  instance.register(workspaceOSProjectsRoutes, {
+    prefix: `${prefix}/api/workspaceos/projects`,
   });
 
   done();
