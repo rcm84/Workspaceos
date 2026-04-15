@@ -42,6 +42,31 @@ const toEnvFileContent = (envJson: Record<string, string>): string => {
 };
 
 class WorkspaceOSProjectsService {
+  private async cloneTemplateRepo(repoUrl: string, localPath: string): Promise<void> {
+    await mkdir(workspaceRoot, { recursive: true });
+    await execFileAsync('git', ['clone', repoUrl, localPath, '--depth', '1']);
+  }
+
+  private async writeProjectEnvFile(
+    localPath: string,
+    envJson: Record<string, string>
+  ): Promise<void> {
+    const envContent = toEnvFileContent(envJson);
+    await writeFile(path.join(localPath, '.env'), `${envContent}\n`, 'utf-8');
+  }
+
+  private normalizeEnvValues(input: {
+    databaseUrl: string;
+    port: number;
+    envJson: Record<string, string>;
+  }): Record<string, string> {
+    return {
+      ...input.envJson,
+      DATABASE_URL: input.databaseUrl,
+      PORT: String(input.port),
+    };
+  }
+
   async listProjects(): Promise<WorkspaceOSProject[]> {
     const projects = await workspaceOSProjectsStore.readAll();
     return projects.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -64,6 +89,12 @@ class WorkspaceOSProjectsService {
     const slugBase = toSlug(input.name);
     const slug = `${slugBase}-${id.slice(0, 8)}`;
     const localPath = path.resolve(workspaceRoot, slug);
+    const port = input.port ?? template.defaultPort;
+    const envJson = this.normalizeEnvValues({
+      databaseUrl: input.databaseUrl,
+      port,
+      envJson: input.envJson,
+    });
 
     const project: WorkspaceOSProject = {
       id,
@@ -72,12 +103,9 @@ class WorkspaceOSProjectsService {
       templateSlug: template.slug,
       status: 'PROVISIONING',
       localPath,
-      port: input.port ?? template.defaultPort,
+      port,
       databaseUrl: input.databaseUrl,
-      envJson: {
-        DATABASE_URL: input.databaseUrl,
-        ...input.envJson,
-      },
+      envJson,
       createdAt: now,
       updatedAt: now,
     };
@@ -87,11 +115,8 @@ class WorkspaceOSProjectsService {
     await workspaceOSProjectsStore.writeAll(projects);
 
     try {
-      await mkdir(workspaceRoot, { recursive: true });
-      await execFileAsync('git', ['clone', template.repoUrl, localPath, '--depth', '1']);
-
-      const envContent = toEnvFileContent(project.envJson);
-      await writeFile(path.join(localPath, '.env'), `${envContent}\n`, 'utf-8');
+      await this.cloneTemplateRepo(template.repoUrl, localPath);
+      await this.writeProjectEnvFile(localPath, project.envJson);
 
       return this.setStatus(project.id, 'READY');
     } catch (error) {
@@ -112,19 +137,28 @@ class WorkspaceOSProjectsService {
     }
 
     const current = projects[index];
+    const nextPort = input.port ?? current.port;
+    const nextDatabaseUrl = input.databaseUrl ?? current.databaseUrl;
+    const nextEnvJson = this.normalizeEnvValues({
+      databaseUrl: nextDatabaseUrl,
+      port: nextPort,
+      envJson: input.envJson ? { ...input.envJson } : { ...current.envJson },
+    });
+
     const next: WorkspaceOSProject = {
       ...current,
       ...input,
-      envJson: input.envJson ? { ...input.envJson } : current.envJson,
+      port: nextPort,
+      databaseUrl: nextDatabaseUrl,
+      envJson: nextEnvJson,
       updatedAt: new Date().toISOString(),
     };
 
     projects[index] = next;
     await workspaceOSProjectsStore.writeAll(projects);
 
-    if (input.envJson) {
-      const envContent = toEnvFileContent(next.envJson);
-      await writeFile(path.join(next.localPath, '.env'), `${envContent}\n`, 'utf-8');
+    if (input.envJson || input.databaseUrl || input.port) {
+      await this.writeProjectEnvFile(next.localPath, next.envJson);
     }
 
     return next;
