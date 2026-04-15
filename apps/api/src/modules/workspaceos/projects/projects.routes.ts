@@ -13,7 +13,10 @@ import {
 } from '@colanode/server/modules/workspaceos/projects/projects.types';
 
 const errorResponseSchema = z.object({
-  message: z.string(),
+  success: z.literal(false),
+  error: z.object({
+    message: z.string(),
+  }),
 });
 
 export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (

@@ -8,6 +8,10 @@ import {
   writeJsonFileSafe,
 } from '@colanode/server/modules/workspaceos/lib/fs';
 import {
+  WORKSPACEOS_PROJECTS_METADATA_FILE_NAME,
+  WORKSPACEOS_STORAGE_DIRECTORY,
+} from '@colanode/server/modules/workspaceos/shared/constants';
+import {
   workspaceOSProjectsListSchema,
   type WorkspaceOSProject,
 } from '@colanode/server/modules/workspaceos/projects/projects.types';
@@ -15,7 +19,7 @@ import {
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const storeFilePath = path.resolve(
   moduleDir,
-  '../../../../storage/workspaceos-projects.json'
+  `../../../../${WORKSPACEOS_STORAGE_DIRECTORY}/${WORKSPACEOS_PROJECTS_METADATA_FILE_NAME}`
 );
 
 class WorkspaceOSProjectsStore {

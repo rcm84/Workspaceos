@@ -1,6 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 
 import { workspaceOSDockerService } from '@colanode/server/modules/workspaceos/docker/docker.service';
+import { sendWorkspaceOSError } from '@colanode/server/modules/workspaceos/shared/errors';
 
 export const workspaceOSDockerController = {
   async generate(
@@ -11,9 +12,7 @@ export const workspaceOSDockerController = {
       const output = await workspaceOSDockerService.generateDockerCompose(request.params.id);
       return reply.code(200).send(output);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to generate docker compose';
-      const statusCode = message === 'Project not found' ? 404 : 400;
-      return reply.code(statusCode).send({ message });
+      return sendWorkspaceOSError(reply, error, 'Unable to generate docker compose');
     }
   },
 };

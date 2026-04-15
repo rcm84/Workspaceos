@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 import { readTextFileSafe, writeTextFileSafe } from '@colanode/server/modules/workspaceos/lib/fs';
 import { workspaceOSProjectsService } from '@colanode/server/modules/workspaceos/projects/projects.service';
 import { type WorkspaceOSProject } from '@colanode/server/modules/workspaceos/projects/projects.types';
+import { NotFoundError } from '@colanode/server/modules/workspaceos/shared/errors';
+import {
+  WORKSPACEOS_DOCKER_COMPOSE_FILE_NAME,
+  WORKSPACEOS_DOCKER_TEMPLATE_FILE_NAME,
+} from '@colanode/server/modules/workspaceos/shared/constants';
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const templatesRoot = path.resolve(moduleDir, '../../../../../templates');
@@ -14,7 +19,7 @@ class WorkspaceOSDockerService {
     const project = await workspaceOSProjectsService.getProject(projectId);
 
     if (!project) {
-      throw new Error('Project not found');
+      throw new NotFoundError('Project not found');
     }
 
     return project;
@@ -24,7 +29,7 @@ class WorkspaceOSDockerService {
     const templatePath = path.join(
       templatesRoot,
       project.templateSlug,
-      'docker.template.yml'
+      WORKSPACEOS_DOCKER_TEMPLATE_FILE_NAME
     );
 
     try {
@@ -61,7 +66,7 @@ class WorkspaceOSDockerService {
 
   async generateDockerCompose(projectId: string): Promise<{ filePath: string }> {
     const project = await this.resolveProject(projectId);
-    const composePath = path.join(project.localPath, 'docker-compose.yml');
+    const composePath = path.join(project.localPath, WORKSPACEOS_DOCKER_COMPOSE_FILE_NAME);
     const template = await this.resolveDockerTemplate(project);
 
     const composeContent = template

@@ -12,7 +12,10 @@ const responseSchema = z.object({
 });
 
 const errorResponseSchema = z.object({
-  message: z.string(),
+  success: z.literal(false),
+  error: z.object({
+    message: z.string(),
+  }),
 });
 
 export const workspaceOSDockerRoutes: FastifyPluginCallbackZod = (instance, _, done) => {

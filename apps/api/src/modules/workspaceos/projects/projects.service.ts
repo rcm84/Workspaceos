@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 import { writeEnvFile } from '@colanode/server/modules/workspaceos/lib/env';
 import { cloneRepository } from '@colanode/server/modules/workspaceos/lib/git';
 import { generateFilesystemSafeSlug } from '@colanode/server/modules/workspaceos/lib/slug';
-import { createLogger } from '@colanode/server/lib/logger';
 import {
   type CreateWorkspaceOSProjectInput,
   type UpdateWorkspaceOSProjectInput,
@@ -15,11 +14,16 @@ import {
   type WorkspaceOSProject,
   type WorkspaceOSProjectStatus,
 } from '@colanode/server/modules/workspaceos/projects/projects.types';
+import { AppError, NotFoundError } from '@colanode/server/modules/workspaceos/shared/errors';
+import {
+  WORKSPACEOS_WORKSPACE_DIRECTORY,
+} from '@colanode/server/modules/workspaceos/shared/constants';
+import { createWorkspaceOSLogger } from '@colanode/server/modules/workspaceos/shared/logger';
 import { templatesService } from '@colanode/server/modules/workspaceos/templates/templates.service';
 
-const logger = createLogger('workspaceos:projects-service');
+const logger = createWorkspaceOSLogger('projects-service');
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const workspaceRoot = path.resolve(moduleDir, '../../../../workspace');
+const workspaceRoot = path.resolve(moduleDir, `../../../../${WORKSPACEOS_WORKSPACE_DIRECTORY}`);
 
 class WorkspaceOSProjectsService {
   private async cloneTemplateRepo(repoUrl: string, localPath: string): Promise<void> {
@@ -59,7 +63,7 @@ class WorkspaceOSProjectsService {
     const template = await templatesService.getTemplate(input.templateSlug);
 
     if (!template) {
-      throw new Error(`Template '${input.templateSlug}' not found`);
+      throw new NotFoundError(`Template '${input.templateSlug}' not found`);
     }
 
     const now = new Date().toISOString();
@@ -98,7 +102,10 @@ class WorkspaceOSProjectsService {
 
       return this.setStatus(project.id, 'READY');
     } catch (error) {
-      logger.error({ error, projectId: project.id }, 'WorkspaceOS project provisioning failed');
+      logger.error('WorkspaceOS project provisioning failed', {
+        error,
+        projectId: project.id,
+      });
       return this.setStatus(project.id, 'ERROR');
     }
   }
@@ -154,7 +161,7 @@ class WorkspaceOSProjectsService {
     const index = projects.findIndex((project) => project.id === id);
 
     if (index < 0) {
-      throw new Error(`Project '${id}' not found`);
+      throw new AppError(`Project '${id}' not found`, 404);
     }
 
     const next: WorkspaceOSProject = {
