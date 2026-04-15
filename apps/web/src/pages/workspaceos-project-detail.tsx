@@ -62,10 +62,21 @@ export const WorkspaceOSProjectDetailPage = ({
         </Button>
       </div>
 
-      {projectQuery.isLoading && <Skeleton className="h-32 w-full" />}
+      {projectQuery.isLoading && (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Loading project details...</p>
+          <Skeleton className="h-32 w-full" />
+        </div>
+      )}
 
       {projectQuery.isError && (
-        <p className="text-sm text-destructive">{projectQuery.error.message}</p>
+        <div className="space-y-2 rounded-md border border-destructive/20 bg-destructive/5 p-4">
+          <p className="text-sm font-medium text-destructive">Could not load project details.</p>
+          <p className="text-sm text-destructive">{projectQuery.error.message}</p>
+          <Button onClick={() => projectQuery.refetch()} size="sm" variant="secondary">
+            Retry
+          </Button>
+        </div>
       )}
 
       {projectQuery.isSuccess && (
@@ -76,6 +87,14 @@ export const WorkspaceOSProjectDetailPage = ({
           isExportingZip={exportZipMutation.isPending}
           isGeneratingDocker={generateDockerMutation.isPending}
           onDeleteProject={() => {
+            const isConfirmed = window.confirm(
+              'Delete this project? This archives it and hides it from the active flow.'
+            );
+
+            if (!isConfirmed) {
+              return;
+            }
+
             setActionSuccessMessage(undefined);
             deleteProjectMutation.mutate();
           }}

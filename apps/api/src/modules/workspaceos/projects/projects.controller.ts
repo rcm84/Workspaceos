@@ -8,8 +8,12 @@ import { workspaceOSProjectsService } from '@colanode/server/modules/workspaceos
 import {
   NotFoundError,
   sendWorkspaceOSError,
-  toWorkspaceOSErrorResponse,
 } from '@colanode/server/modules/workspaceos/shared/errors';
+
+const toSuccessResponse = <T>(data: T) => ({
+  success: true as const,
+  data,
+});
 
 export const workspaceOSProjectsController = {
   async create(
@@ -18,14 +22,15 @@ export const workspaceOSProjectsController = {
   ) {
     try {
       const project = await workspaceOSProjectsService.createProject(request.body);
-      return reply.code(201).send(project);
+      return reply.code(201).send(toSuccessResponse(project));
     } catch (error) {
       return sendWorkspaceOSError(reply, error, 'Unable to create project');
     }
   },
 
   async list() {
-    return workspaceOSProjectsService.listProjects();
+    const projects = await workspaceOSProjectsService.listProjects();
+    return toSuccessResponse(projects);
   },
 
   async getById(
@@ -35,12 +40,10 @@ export const workspaceOSProjectsController = {
     const project = await workspaceOSProjectsService.getProject(request.params.id);
 
     if (!project) {
-      return reply
-        .code(404)
-        .send(toWorkspaceOSErrorResponse(new NotFoundError('Project not found').message));
+      return sendWorkspaceOSError(reply, new NotFoundError('Project not found'), 'Project not found');
     }
 
-    return project;
+    return toSuccessResponse(project);
   },
 
   async update(
@@ -50,18 +53,24 @@ export const workspaceOSProjectsController = {
     }>,
     reply: FastifyReply
   ) {
-    const project = await workspaceOSProjectsService.updateProject(
-      request.params.id,
-      request.body
-    );
+    try {
+      const project = await workspaceOSProjectsService.updateProject(
+        request.params.id,
+        request.body
+      );
 
-    if (!project) {
-      return reply
-        .code(404)
-        .send(toWorkspaceOSErrorResponse(new NotFoundError('Project not found').message));
+      if (!project) {
+        return sendWorkspaceOSError(
+          reply,
+          new NotFoundError('Project not found'),
+          'Project not found'
+        );
+      }
+
+      return toSuccessResponse(project);
+    } catch (error) {
+      return sendWorkspaceOSError(reply, error, 'Unable to update project');
     }
-
-    return project;
   },
 
   async remove(
@@ -70,7 +79,16 @@ export const workspaceOSProjectsController = {
   ) {
     try {
       const project = await workspaceOSProjectsService.archiveProject(request.params.id);
-      return project;
+
+      if (!project) {
+        return sendWorkspaceOSError(
+          reply,
+          new NotFoundError('Project not found'),
+          'Project not found'
+        );
+      }
+
+      return toSuccessResponse(project);
     } catch (error) {
       return sendWorkspaceOSError(reply, error, 'Unable to archive project');
     }

@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { ensureDirectoryExists } from '@colanode/server/modules/workspaceos/lib/fs';
 import { workspaceOSProjectsService } from '@colanode/server/modules/workspaceos/projects/projects.service';
 import { type WorkspaceOSProject } from '@colanode/server/modules/workspaceos/projects/projects.types';
-import { NotFoundError } from '@colanode/server/modules/workspaceos/shared/errors';
+import { AppError, NotFoundError } from '@colanode/server/modules/workspaceos/shared/errors';
 import {
   WORKSPACEOS_EXPORTS_DIRECTORY_NAME,
   WORKSPACEOS_STORAGE_DIRECTORY,
@@ -49,23 +49,27 @@ class WorkspaceOSExportsService {
     const fileName = `${project.slug}-${timestamp}.zip`;
     const outputPath = path.join(exportsRoot, fileName);
 
-    await execFileAsync(
-      'zip',
-      [
-        '-r',
-        '-q',
-        outputPath,
-        '.',
-        '-x',
-        '.git/*',
-        '*/.git/*',
-        'node_modules/*',
-        '*/node_modules/*',
-        'dist/*',
-        '*/dist/*',
-      ],
-      { cwd: project.localPath }
-    );
+    try {
+      await execFileAsync(
+        'zip',
+        [
+          '-r',
+          '-q',
+          outputPath,
+          '.',
+          '-x',
+          '.git/*',
+          '*/.git/*',
+          'node_modules/*',
+          '*/node_modules/*',
+          'dist/*',
+          '*/dist/*',
+        ],
+        { cwd: project.localPath }
+      );
+    } catch (error) {
+      throw new AppError('Export failure: unable to create project archive', 400);
+    }
 
     return {
       filePath: outputPath,

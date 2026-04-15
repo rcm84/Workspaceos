@@ -6,13 +6,13 @@ import {
   templateManifestSchema,
   templatesListResponseSchema,
 } from '@colanode/server/modules/workspaceos/templates/templates.types';
+import {
+  workspaceOSErrorResponseSchema,
+  workspaceOSSuccessResponseSchema,
+} from '@colanode/server/modules/workspaceos/shared/responses';
 
 const templateParamsSchema = z.object({
   slug: z.string().trim().min(1),
-});
-
-const templateNotFoundResponseSchema = z.object({
-  message: z.string(),
 });
 
 export const workspaceOSTemplatesRoutes: FastifyPluginCallbackZod = (
@@ -25,7 +25,7 @@ export const workspaceOSTemplatesRoutes: FastifyPluginCallbackZod = (
     url: '/',
     schema: {
       response: {
-        200: templatesListResponseSchema,
+        200: workspaceOSSuccessResponseSchema(templatesListResponseSchema),
       },
     },
     handler: templatesController.list,
@@ -37,8 +37,8 @@ export const workspaceOSTemplatesRoutes: FastifyPluginCallbackZod = (
     schema: {
       params: templateParamsSchema,
       response: {
-        200: templateManifestSchema,
-        404: templateNotFoundResponseSchema,
+        200: workspaceOSSuccessResponseSchema(templateManifestSchema),
+        404: workspaceOSErrorResponseSchema,
       },
     },
     handler: templatesController.getBySlug,

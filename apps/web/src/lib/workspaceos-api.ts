@@ -27,6 +27,11 @@ export interface CreateWorkspaceOSProjectInput {
   envJson?: Record<string, string>;
 }
 
+interface WorkspaceOSSuccessResponse<T> {
+  success: true;
+  data: T;
+}
+
 interface WorkspaceOSErrorResponse {
   error?: {
     message?: string;
@@ -54,16 +59,21 @@ const ensureOk = async (response: Response) => {
   return response;
 };
 
+const parseSuccess = async <T>(response: Response): Promise<T> => {
+  const body = (await response.json()) as WorkspaceOSSuccessResponse<T>;
+  return body.data;
+};
+
 export const getWorkspaceOSTemplates = async (): Promise<WorkspaceOSTemplate[]> => {
   const response = await fetch('/api/workspaceos/templates');
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };
 
 export const getWorkspaceOSProjects = async (): Promise<WorkspaceOSProject[]> => {
   const response = await fetch('/api/workspaceos/projects');
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };
 
 export const getWorkspaceOSProject = async (
@@ -71,7 +81,7 @@ export const getWorkspaceOSProject = async (
 ): Promise<WorkspaceOSProject> => {
   const response = await fetch(`/api/workspaceos/projects/${encodeURIComponent(id)}`);
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };
 
 export const createWorkspaceOSProject = async (
@@ -86,7 +96,7 @@ export const createWorkspaceOSProject = async (
   });
 
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };
 
 export const generateWorkspaceOSProjectDocker = async (
@@ -100,7 +110,7 @@ export const generateWorkspaceOSProjectDocker = async (
   );
 
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };
 
 export const exportWorkspaceOSProject = async (
@@ -111,7 +121,7 @@ export const exportWorkspaceOSProject = async (
   });
 
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };
 
 export const deleteWorkspaceOSProject = async (
@@ -122,5 +132,5 @@ export const deleteWorkspaceOSProject = async (
   });
 
   await ensureOk(response);
-  return response.json();
+  return parseSuccess(response);
 };

@@ -1,5 +1,7 @@
 import { FastifyReply } from 'fastify';
 
+import { workspaceOSErrorResponseSchema } from '@colanode/server/modules/workspaceos/shared/responses';
+
 export class AppError extends Error {
   readonly statusCode: number;
 
@@ -24,12 +26,13 @@ export class ValidationError extends AppError {
   }
 }
 
-export const toWorkspaceOSErrorResponse = (message: string) => ({
-  success: false as const,
-  error: {
-    message,
-  },
-});
+export const toWorkspaceOSErrorResponse = (message: string) =>
+  workspaceOSErrorResponseSchema.parse({
+    success: false as const,
+    error: {
+      message,
+    },
+  });
 
 export const sendWorkspaceOSError = (
   reply: FastifyReply,

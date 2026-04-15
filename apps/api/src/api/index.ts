@@ -9,23 +9,31 @@ import { workspaceOSExportsRoutes } from '@colanode/server/modules/workspaceos/e
 import { workspaceOSProjectsRoutes } from '@colanode/server/modules/workspaceos/projects/projects.routes';
 import { workspaceOSTemplatesRoutes } from '@colanode/server/modules/workspaceos/templates/templates.routes';
 
+const workspaceOSRoutes: FastifyPluginCallback = (instance, _, done) => {
+  instance.register(workspaceOSTemplatesRoutes, {
+    prefix: '/templates',
+  });
+  instance.register(workspaceOSProjectsRoutes, {
+    prefix: '/projects',
+  });
+  instance.register(workspaceOSDockerRoutes, {
+    prefix: '/projects',
+  });
+  instance.register(workspaceOSExportsRoutes, {
+    prefix: '/projects',
+  });
+
+  done();
+};
+
 export const apiRoutes: FastifyPluginCallback = (instance, _, done) => {
   const prefix = config.pathPrefix ? `/${config.pathPrefix}` : '';
 
   instance.register(homeRoute, { prefix });
   instance.register(configGetRoute, { prefix });
   instance.register(clientRoutes, { prefix: `${prefix}/client/v1` });
-  instance.register(workspaceOSTemplatesRoutes, {
-    prefix: `${prefix}/api/workspaceos/templates`,
-  });
-  instance.register(workspaceOSProjectsRoutes, {
-    prefix: `${prefix}/api/workspaceos/projects`,
-  });
-  instance.register(workspaceOSDockerRoutes, {
-    prefix: `${prefix}/api/workspaceos/projects`,
-  });
-  instance.register(workspaceOSExportsRoutes, {
-    prefix: `${prefix}/api/workspaceos/projects`,
+  instance.register(workspaceOSRoutes, {
+    prefix: `${prefix}/api/workspaceos`,
   });
 
   done();
