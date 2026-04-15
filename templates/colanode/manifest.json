@@ -1,0 +1,17 @@
+{
+  "slug": "colanode",
+  "name": "Colanode",
+  "description": "Official Colanode workspace template",
+  "repoUrl": "https://github.com/colanode/colanode",
+  "defaultPort": 4000,
+  "env": [
+    {
+      "key": "POSTGRES_URL",
+      "required": true
+    },
+    {
+      "key": "REDIS_URL",
+      "required": true
+    }
+  ]
+}
