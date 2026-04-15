@@ -6,6 +6,7 @@ import {
   createWorkspaceOSProject,
   getWorkspaceOSTemplates,
 } from '@colanode/web/lib/workspaceos-api';
+import { Button } from '@colanode/ui/components/ui/button';
 import { Skeleton } from '@colanode/ui/components/ui/skeleton';
 
 interface CreateProjectFormValues {
@@ -75,6 +76,7 @@ export const WorkspaceOSCreateProjectPage = () => {
 
       {templatesQuery.isLoading && (
         <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Loading templates...</p>
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
@@ -83,10 +85,28 @@ export const WorkspaceOSCreateProjectPage = () => {
       )}
 
       {templatesQuery.isError && (
-        <p className="text-sm text-destructive">{templatesQuery.error.message}</p>
+        <div className="space-y-2 rounded-md border border-destructive/20 bg-destructive/5 p-4">
+          <p className="text-sm font-medium text-destructive">Unable to load templates.</p>
+          <p className="text-sm text-destructive">{templatesQuery.error.message}</p>
+          <Button onClick={() => templatesQuery.refetch()} size="sm" variant="secondary">
+            Retry
+          </Button>
+        </div>
       )}
 
-      {templatesQuery.isSuccess && (
+      {templatesQuery.isSuccess && templatesQuery.data.length === 0 && (
+        <div className="rounded-md border border-dashed p-6">
+          <p className="font-medium">No templates found</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add template manifests to the WorkspaceOS templates directory, then refresh this page.
+          </p>
+          <Button asChild className="mt-4" variant="secondary">
+            <a href="/workspaceos">Back to Dashboard</a>
+          </Button>
+        </div>
+      )}
+
+      {templatesQuery.isSuccess && templatesQuery.data.length > 0 && (
         <WorkspaceOSCreateProjectForm
           errorMessage={createProjectMutation.isError ? createProjectMutation.error.message : undefined}
           isSubmitting={createProjectMutation.isPending}

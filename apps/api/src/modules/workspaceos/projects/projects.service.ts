@@ -63,7 +63,7 @@ class WorkspaceOSProjectsService {
     const template = await templatesService.getTemplate(input.templateSlug);
 
     if (!template) {
-      throw new NotFoundError(`Template '${input.templateSlug}' not found`);
+      throw new NotFoundError(`Template not found: '${input.templateSlug}'`);
     }
 
     const now = new Date().toISOString();
@@ -98,15 +98,25 @@ class WorkspaceOSProjectsService {
 
     try {
       await this.cloneTemplateRepo(template.repoUrl, localPath);
-      await this.writeProjectEnvFile(localPath, project.envJson);
-
-      return this.setStatus(project.id, 'READY');
     } catch (error) {
-      logger.error('WorkspaceOS project provisioning failed', {
+      logger.error('WorkspaceOS project clone failed', {
         error,
         projectId: project.id,
       });
-      return this.setStatus(project.id, 'ERROR');
+      await this.setStatus(project.id, 'ERROR');
+      throw new AppError('Clone failure: unable to clone template repository', 400);
+    }
+
+    try {
+      await this.writeProjectEnvFile(localPath, project.envJson);
+      return this.setStatus(project.id, 'READY');
+    } catch (error) {
+      logger.error('WorkspaceOS project env generation failed', {
+        error,
+        projectId: project.id,
+      });
+      await this.setStatus(project.id, 'ERROR');
+      throw new AppError('Env generation failure: unable to write .env file', 400);
     }
   }
 
@@ -143,7 +153,11 @@ class WorkspaceOSProjectsService {
     await workspaceOSProjectsStore.writeAll(projects);
 
     if (input.envJson || input.databaseUrl || input.port) {
-      await this.writeProjectEnvFile(next.localPath, next.envJson);
+      try {
+        await this.writeProjectEnvFile(next.localPath, next.envJson);
+      } catch {
+        throw new AppError('Env generation failure: unable to update .env file', 400);
+      }
     }
 
     return next;
@@ -161,7 +175,7 @@ class WorkspaceOSProjectsService {
     const index = projects.findIndex((project) => project.id === id);
 
     if (index < 0) {
-      throw new AppError(`Project '${id}' not found`, 404);
+      throw new AppError(`Project not found: '${id}'`, 404);
     }
 
     const next: WorkspaceOSProject = {

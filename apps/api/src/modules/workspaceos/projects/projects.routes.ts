@@ -1,4 +1,3 @@
-import { z } from 'zod/v4';
 import { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 
 import { workspaceOSProjectsController } from '@colanode/server/modules/workspaceos/projects/projects.controller';
@@ -11,13 +10,10 @@ import {
   workspaceOSProjectSchema,
   workspaceOSProjectsListSchema,
 } from '@colanode/server/modules/workspaceos/projects/projects.types';
-
-const errorResponseSchema = z.object({
-  success: z.literal(false),
-  error: z.object({
-    message: z.string(),
-  }),
-});
+import {
+  workspaceOSErrorResponseSchema,
+  workspaceOSSuccessResponseSchema,
+} from '@colanode/server/modules/workspaceos/shared/responses';
 
 export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (
   instance,
@@ -30,8 +26,9 @@ export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (
     schema: {
       body: createWorkspaceOSProjectSchema,
       response: {
-        201: workspaceOSProjectSchema,
-        400: errorResponseSchema,
+        201: workspaceOSSuccessResponseSchema(workspaceOSProjectSchema),
+        400: workspaceOSErrorResponseSchema,
+        404: workspaceOSErrorResponseSchema,
       },
     },
     handler: workspaceOSProjectsController.create,
@@ -42,7 +39,7 @@ export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (
     url: '/',
     schema: {
       response: {
-        200: workspaceOSProjectsListSchema,
+        200: workspaceOSSuccessResponseSchema(workspaceOSProjectsListSchema),
       },
     },
     handler: workspaceOSProjectsController.list,
@@ -54,8 +51,8 @@ export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (
     schema: {
       params: workspaceOSProjectParamsSchema,
       response: {
-        200: workspaceOSProjectSchema,
-        404: errorResponseSchema,
+        200: workspaceOSSuccessResponseSchema(workspaceOSProjectSchema),
+        404: workspaceOSErrorResponseSchema,
       },
     },
     handler: workspaceOSProjectsController.getById,
@@ -68,8 +65,8 @@ export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (
       params: workspaceOSProjectParamsSchema,
       body: updateWorkspaceOSProjectSchema,
       response: {
-        200: workspaceOSProjectSchema,
-        404: errorResponseSchema,
+        200: workspaceOSSuccessResponseSchema(workspaceOSProjectSchema),
+        404: workspaceOSErrorResponseSchema,
       },
     },
     handler: workspaceOSProjectsController.update,
@@ -81,8 +78,8 @@ export const workspaceOSProjectsRoutes: FastifyPluginCallbackZod = (
     schema: {
       params: workspaceOSProjectParamsSchema,
       response: {
-        200: workspaceOSProjectSchema,
-        404: errorResponseSchema,
+        200: workspaceOSSuccessResponseSchema(workspaceOSProjectSchema),
+        404: workspaceOSErrorResponseSchema,
       },
     },
     handler: workspaceOSProjectsController.remove,

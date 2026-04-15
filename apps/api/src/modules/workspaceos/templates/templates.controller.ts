@@ -1,10 +1,17 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 
+import { NotFoundError, sendWorkspaceOSError } from '@colanode/server/modules/workspaceos/shared/errors';
 import { templatesService } from '@colanode/server/modules/workspaceos/templates/templates.service';
+
+const toSuccessResponse = <T>(data: T) => ({
+  success: true as const,
+  data,
+});
 
 export const templatesController = {
   async list() {
-    return templatesService.listTemplates();
+    const templates = await templatesService.listTemplates();
+    return toSuccessResponse(templates);
   },
 
   async getBySlug(
@@ -14,11 +21,13 @@ export const templatesController = {
     const template = await templatesService.getTemplate(request.params.slug);
 
     if (!template) {
-      return reply.code(404).send({
-        message: `Template '${request.params.slug}' not found`,
-      });
+      return sendWorkspaceOSError(
+        reply,
+        new NotFoundError(`Template not found: '${request.params.slug}'`),
+        'Template not found'
+      );
     }
 
-    return template;
+    return toSuccessResponse(template);
   },
 };

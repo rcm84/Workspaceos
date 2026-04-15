@@ -4,20 +4,27 @@ interface ProjectStatusBadgeProps {
   status: string;
 }
 
-const getStatusVariant = (status: string): 'default' | 'secondary' | 'destructive' => {
-  const normalizedStatus = status.toLowerCase();
-
-  if (normalizedStatus === 'failed' || normalizedStatus === 'error') {
-    return 'destructive';
+const getStatusStyles = (status: string): string => {
+  switch (status.toUpperCase()) {
+    case 'READY':
+      return 'bg-emerald-600 text-white';
+    case 'ERROR':
+      return 'bg-destructive text-white';
+    case 'PROVISIONING':
+      return 'bg-amber-500 text-black animate-pulse';
+    case 'ARCHIVED':
+      return 'bg-slate-500 text-white';
+    default:
+      return 'bg-secondary text-secondary-foreground';
   }
-
-  if (normalizedStatus === 'completed' || normalizedStatus === 'active') {
-    return 'default';
-  }
-
-  return 'secondary';
 };
 
 export const ProjectStatusBadge = ({ status }: ProjectStatusBadgeProps) => {
-  return <Badge variant={getStatusVariant(status)}>{status}</Badge>;
+  const normalizedStatus = status.toUpperCase();
+
+  return (
+    <Badge className={getStatusStyles(normalizedStatus)} variant="secondary">
+      {normalizedStatus}
+    </Badge>
+  );
 };
