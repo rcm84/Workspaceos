@@ -1,7 +1,12 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  ensureDirectoryExists,
+  readJsonFileSafe,
+  readTextFileSafe,
+  writeJsonFileSafe,
+} from '@colanode/server/modules/workspaceos/lib/fs';
 import {
   workspaceOSProjectsListSchema,
   type WorkspaceOSProject,
@@ -17,19 +22,17 @@ class WorkspaceOSProjectsStore {
   private writeLock = Promise.resolve();
 
   private async ensureStoreFile() {
-    await mkdir(path.dirname(storeFilePath), { recursive: true });
+    await ensureDirectoryExists(path.dirname(storeFilePath));
+    const existing = await readTextFileSafe(storeFilePath, '');
 
-    try {
-      await readFile(storeFilePath, 'utf-8');
-    } catch {
-      await writeFile(storeFilePath, '[]\n', 'utf-8');
+    if (existing.trim().length === 0) {
+      await writeJsonFileSafe(storeFilePath, []);
     }
   }
 
   async readAll(): Promise<WorkspaceOSProject[]> {
     await this.ensureStoreFile();
-    const raw = await readFile(storeFilePath, 'utf-8');
-    const parsed = JSON.parse(raw);
+    const parsed = await readJsonFileSafe<unknown>(storeFilePath, []);
     return workspaceOSProjectsListSchema.parse(parsed);
   }
 
@@ -37,8 +40,7 @@ class WorkspaceOSProjectsStore {
     await this.ensureStoreFile();
 
     this.writeLock = this.writeLock.then(async () => {
-      const serialized = JSON.stringify(projects, null, 2);
-      await writeFile(storeFilePath, `${serialized}\n`, 'utf-8');
+      await writeJsonFileSafe(storeFilePath, projects);
     });
 
     return this.writeLock;

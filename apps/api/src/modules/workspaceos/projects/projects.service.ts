@@ -1,10 +1,10 @@
-import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { promisify } from 'node:util';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { writeEnvFile } from '@colanode/server/modules/workspaceos/lib/env';
+import { cloneRepository } from '@colanode/server/modules/workspaceos/lib/git';
+import { generateFilesystemSafeSlug } from '@colanode/server/modules/workspaceos/lib/slug';
 import { createLogger } from '@colanode/server/lib/logger';
 import {
   type CreateWorkspaceOSProjectInput,
@@ -18,41 +18,19 @@ import {
 import { templatesService } from '@colanode/server/modules/workspaceos/templates/templates.service';
 
 const logger = createLogger('workspaceos:projects-service');
-const execFileAsync = promisify(execFile);
-
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(moduleDir, '../../../../workspace');
 
-const toSlug = (value: string): string => {
-  const slug = value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-
-  return slug.length > 0 ? slug : 'workspaceos-project';
-};
-
-const toEnvFileContent = (envJson: Record<string, string>): string => {
-  return Object.entries(envJson)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
-};
-
 class WorkspaceOSProjectsService {
   private async cloneTemplateRepo(repoUrl: string, localPath: string): Promise<void> {
-    await mkdir(workspaceRoot, { recursive: true });
-    await execFileAsync('git', ['clone', repoUrl, localPath, '--depth', '1']);
+    await cloneRepository(repoUrl, localPath);
   }
 
   private async writeProjectEnvFile(
     localPath: string,
     envJson: Record<string, string>
   ): Promise<void> {
-    const envContent = toEnvFileContent(envJson);
-    await writeFile(path.join(localPath, '.env'), `${envContent}\n`, 'utf-8');
+    await writeEnvFile(localPath, envJson);
   }
 
   private normalizeEnvValues(input: {
@@ -86,7 +64,7 @@ class WorkspaceOSProjectsService {
 
     const now = new Date().toISOString();
     const id = randomUUID();
-    const slugBase = toSlug(input.name);
+    const slugBase = generateFilesystemSafeSlug(input.name);
     const slug = `${slugBase}-${id.slice(0, 8)}`;
     const localPath = path.resolve(workspaceRoot, slug);
     const port = input.port ?? template.defaultPort;
