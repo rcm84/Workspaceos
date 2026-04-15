@@ -5,6 +5,11 @@ import {
   type UpdateWorkspaceOSProjectInput,
 } from '@colanode/server/modules/workspaceos/projects/projects.schema';
 import { workspaceOSProjectsService } from '@colanode/server/modules/workspaceos/projects/projects.service';
+import {
+  NotFoundError,
+  sendWorkspaceOSError,
+  toWorkspaceOSErrorResponse,
+} from '@colanode/server/modules/workspaceos/shared/errors';
 
 export const workspaceOSProjectsController = {
   async create(
@@ -15,8 +20,7 @@ export const workspaceOSProjectsController = {
       const project = await workspaceOSProjectsService.createProject(request.body);
       return reply.code(201).send(project);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to create project';
-      return reply.code(400).send({ message });
+      return sendWorkspaceOSError(reply, error, 'Unable to create project');
     }
   },
 
@@ -31,7 +35,9 @@ export const workspaceOSProjectsController = {
     const project = await workspaceOSProjectsService.getProject(request.params.id);
 
     if (!project) {
-      return reply.code(404).send({ message: 'Project not found' });
+      return reply
+        .code(404)
+        .send(toWorkspaceOSErrorResponse(new NotFoundError('Project not found').message));
     }
 
     return project;
@@ -50,7 +56,9 @@ export const workspaceOSProjectsController = {
     );
 
     if (!project) {
-      return reply.code(404).send({ message: 'Project not found' });
+      return reply
+        .code(404)
+        .send(toWorkspaceOSErrorResponse(new NotFoundError('Project not found').message));
     }
 
     return project;
@@ -60,12 +68,11 @@ export const workspaceOSProjectsController = {
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply
   ) {
-    const project = await workspaceOSProjectsService.archiveProject(request.params.id);
-
-    if (!project) {
-      return reply.code(404).send({ message: 'Project not found' });
+    try {
+      const project = await workspaceOSProjectsService.archiveProject(request.params.id);
+      return project;
+    } catch (error) {
+      return sendWorkspaceOSError(reply, error, 'Unable to archive project');
     }
-
-    return project;
   },
 };
